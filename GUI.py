@@ -1,8 +1,12 @@
 import cv2
 import tkinter as tk
 from tkinter import ttk
+from tkinter import messagebox
 from PIL import ImageTk, Image
 from server import Server
+from ArUcoPage import ArUcoPage
+from NeuralNetPage import NeuralNetPage
+from ManipulatorPage import ManipulatorPage
 
 
 def get_available_cameras():
@@ -20,6 +24,10 @@ def get_available_cameras():
 class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
+
+        self.current_frame = None
+        self.cap = None
+
         self.title("Vision")
         self.attributes('-fullscreen', True)
         self.geometry("1920x1080")
@@ -61,19 +69,24 @@ class MainApp(tk.Tk):
         top_bar.config(height=int(80 * self.scale_factor))
 
         close_icon = Image.open("images_data/close_icon.png")
-        close_icon_resized = ImageTk.PhotoImage(close_icon.resize((int(50 * self.scale_factor), int(50 * self.scale_factor))))
+        close_icon_resized = ImageTk.PhotoImage(close_icon.resize((int(50 * self.scale_factor),
+                                                                   int(50 * self.scale_factor))))
 
         home_icon = Image.open("images_data/home_icon.png")
-        home_icon_resized = ImageTk.PhotoImage(home_icon.resize((int(50 * self.scale_factor), int(50 * self.scale_factor))))
+        home_icon_resized = ImageTk.PhotoImage(home_icon.resize((int(50 * self.scale_factor),
+                                                                 int(50 * self.scale_factor))))
 
         settings_icon = Image.open("images_data/settings_icon.png")
-        settings_icon_resized = ImageTk.PhotoImage(settings_icon.resize((int(50 * self.scale_factor), int(50 * self.scale_factor))))
+        settings_icon_resized = ImageTk.PhotoImage(settings_icon.resize((int(50 * self.scale_factor),
+                                                                         int(50 * self.scale_factor))))
 
         disconnect_icon = Image.open("images_data/disconnect_icon.png")
-        self.disconnect_icon_resized = ImageTk.PhotoImage(disconnect_icon.resize((int(50 * self.scale_factor), int(50 * self.scale_factor))))
+        self.disconnect_icon_resized = ImageTk.PhotoImage(disconnect_icon.resize((int(50 * self.scale_factor),
+                                                                                  int(50 * self.scale_factor))))
 
         connect_icon = Image.open("images_data/connect_icon.png")
-        self.connect_icon_resized = ImageTk.PhotoImage(connect_icon.resize((int(50 * self.scale_factor), int(50 * self.scale_factor))))
+        self.connect_icon_resized = ImageTk.PhotoImage(connect_icon.resize((int(50 * self.scale_factor),
+                                                                            int(50 * self.scale_factor))))
 
         close_button = tk.Button(top_bar, image=close_icon_resized, bg='#00326e', relief="flat", command=self.quit,
                                  activebackground='#001f4b', highlightthickness=0)
@@ -106,8 +119,26 @@ class MainApp(tk.Tk):
         self.camera_combobox.pack(side="left", padx=int(30 * self.scale_factor), pady=int(10 * self.scale_factor))
 
     def show_frame(self, page_name):
-        frame = self.frames[page_name]
-        frame.tkraise()
+        if page_name == "HomePage":
+            if self.cap is not None and self.cap.isOpened():
+                self.cap.release()
+                self.cap = None
+            if self.current_frame is not None:
+                self.current_frame.update_flag = False
+            self.current_frame = self.frames[page_name]
+            self.current_frame.tkraise()
+
+        if page_name != "HomePage":
+            if self.camera_combobox.get() == "Нет доступной камеры":
+                messagebox.showerror("Ошибка", "Нет доступной камеры. Запуск невозможен!")
+            else:
+                self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
+                self.current_frame = self.frames[page_name]
+                self.current_frame.cap = self.cap
+                self.current_frame.update_flag = True
+                self.current_frame.video_paused = False
+                self.current_frame.update_stream()
+                self.current_frame.tkraise()
 
     def open_settings_window(self):
         pass
@@ -174,51 +205,6 @@ class HomePage(ttk.Frame):
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
         button_frame.grid_columnconfigure(2, weight=1)
-
-
-class ManipulatorPage(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.create_widgets()
-
-    def create_widgets(self):
-        label = ttk.Label(self, text="Манипулятор", font=("Arial", 18))
-        label.pack(pady=20)
-
-        btn_back = ttk.Button(self, text="Назад на главную",
-                              command=lambda: self.controller.show_frame("HomePage"))
-        btn_back.pack(pady=10)
-
-
-class NeuralNetPage(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.create_widgets()
-
-    def create_widgets(self):
-        label = ttk.Label(self, text="Нейронная сеть", font=("Arial", 18))
-        label.pack(pady=20)
-
-        btn_back = ttk.Button(self, text="Назад на главную",
-                              command=lambda: self.controller.show_frame("HomePage"))
-        btn_back.pack(pady=10)
-
-
-class ArUcoPage(ttk.Frame):
-    def __init__(self, parent, controller):
-        super().__init__(parent)
-        self.controller = controller
-        self.create_widgets()
-
-    def create_widgets(self):
-        label = ttk.Label(self, text="Распознание ArUco", font=("Arial", 18))
-        label.pack(pady=20)
-
-        btn_back = ttk.Button(self, text="Назад на главную",
-                              command=lambda: self.controller.show_frame("HomePage"))
-        btn_back.pack(pady=10)
 
 
 if __name__ == "__main__":
