@@ -11,6 +11,7 @@ class CalibrationWindow(tk.Toplevel):
         self.flag = None
         self.h = None
         self.w = None
+        self.parent = parent
         self.min_area = 250
         self.image_size = (800, 560)
         self.lowerBound = np.array([0, 0, 0], dtype=np.uint8)
@@ -80,7 +81,7 @@ class CalibrationWindow(tk.Toplevel):
             file.write(f"h {int(data['h'])}\n")
             file.write(f"len_f_x {int(data['field_x'])}\n")
             file.write(f"len_f_y {int(data['field_y'])}\n")
-        self.flag = True
+        self.parent.frames["ManipulatorPage"].set_camera_config()
         self.destroy_cam()
 
     def update_stream(self):
