@@ -34,8 +34,8 @@ class ManipulatorPage(ttk.Frame):
         self.objects_coord = []
         self.kernelOpen = np.ones((5, 5))
         self.kernelClose = np.ones((20, 20))
-        self.lowerBound = np.array([0, 0, 0], dtype=np.uint8)
-        self.upperBound = np.array([179, 255, 255], dtype=np.uint8)
+        self.lowerBound = None
+        self.upperBound = None
 
         self.color_dict = {
             'blue': (105, 219, 129),
@@ -97,23 +97,19 @@ class ManipulatorPage(ttk.Frame):
                         background='#001f4b',
                         sliderthickness=int(20 * self.controller.scale_factor))
 
-        # Настройка метки (текст смещен к левой границе)
         label = ttk.Label(frame, text=f"{text}",
                           font=("Arial", int(20 * self.controller.scale_factor)),
                           background="#001f4b",
                           foreground="white")
         label.place(x=10, y=15 * self.controller.scale_factor + row * 50, anchor='w')
 
-        # Получаем ширину родительского фрейма
-        frame.update_idletasks()  # Обновляем информацию о размерах фрейма
+        frame.update_idletasks()
         frame_width = frame.winfo_width()
 
-        # Настройка ползунка (ползунок смещен к правой границе)
         slider = ttk.Scale(frame, from_=from_, to=to_, orient="horizontal", command=command,
                            style="Custom.Horizontal.TScale")
         slider.set(default)
 
-        # Ползунок выравниваем по правой стороне с учетом ширины фрейма
         slider_width = int(200 * self.controller.scale_factor)
         slider_x = frame_width - slider_width - 10
         slider.place(x=slider_x, y=row * 50, width=slider_width)
@@ -121,8 +117,10 @@ class ManipulatorPage(ttk.Frame):
         return slider
 
     def create_management_widgets(self, frame):
-        # Создаем settings_color_frame с фиксированным размером
-        settings_color_frame = ttk.Frame(frame, width=400, height=350)
+        # Создаем settings_color_frame с
+        settings_color_frame = ttk.Frame(frame,
+                                         width=int(450 * self.controller.scale_factor),
+                                         height=int(400 * self.controller.scale_factor))
         settings_color_frame.place(x=50, y=150)
 
         # Добавляем отступы для управления положением
@@ -238,17 +236,18 @@ class ManipulatorPage(ttk.Frame):
         if not self.video_paused:
             ret, frame = self.cap.read()
             if ret:
+                conts = []
                 frame = self.apply_settings(frame)
                 frame = cv2.resize(frame, self.image_shape)
-                imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                if self.lowerBound is not None and self.upperBound is not None:
+                    imgHSV = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+                    mask = cv2.inRange(imgHSV, self.lowerBound, self.upperBound)
+                    maskOpen = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernelOpen)
+                    maskClose = cv2.morphologyEx(maskOpen, cv2.MORPH_CLOSE, self.kernelClose)
+                    maskFinal = maskClose
+                    conts, _ = cv2.findContours(maskFinal.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
-                mask = cv2.inRange(imgHSV, self.lowerBound, self.upperBound)
-                maskOpen = cv2.morphologyEx(mask, cv2.MORPH_OPEN, self.kernelOpen)
-                maskClose = cv2.morphologyEx(maskOpen, cv2.MORPH_CLOSE, self.kernelClose)
-                maskFinal = maskClose
-                conts, _ = cv2.findContours(maskFinal.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-
                 self.objects_coord = []
                 for i, contour in enumerate(conts):
                     x, y, w, h = cv2.boundingRect(contour)
@@ -260,9 +259,8 @@ class ManipulatorPage(ttk.Frame):
                         self.objects_coord.append(
                             (int(center_x_coord * 1 / self.k_x),
                              int(center_y_coord * 1 / self.k_y)))
-                        print(self.objects_coord)
 
-                line_length = 20
+                line_length = int(40 * self.controller.scale_factor)
                 cv2.line(frame,
                          (self.center_x - line_length // 2, self.center_y),
                          (self.center_x + line_length // 2, self.center_y),
@@ -274,7 +272,7 @@ class ManipulatorPage(ttk.Frame):
                 # Draw axis
                 image_width, image_height = self.image_shape
                 padding = 35
-                axis_length = min(image_width, image_height) // 6
+                axis_length = int((min(image_width, image_height) // 6) * 1.5 * self.controller.scale_factor)
 
                 origin_x = padding
                 origin_y = image_height - padding
@@ -286,10 +284,13 @@ class ManipulatorPage(ttk.Frame):
                     3,  # Толщина линии
                     tipLength=0.15  # Длина наконечника стрелки
                 )
-                cv2.putText(frame, "Y", (origin_x - 15, origin_y - axis_length), self.font, 0.5,
-                            (255, 0, 0), 2)
-                cv2.putText(frame, f"{self.len_f_y}, mm", (origin_x + 10, origin_y - axis_length),
-                            self.font, 0.43, (255, 0, 0), 1)
+                cv2.putText(frame, "Y", (origin_x - int(15 * self.controller.scale_factor), origin_y - axis_length),
+                            self.font, 0.5 * self.controller.scale_factor, (255, 0, 0),
+                            2)
+                cv2.putText(frame, f"{self.len_f_y}, mm",
+                            (origin_x + int(10 * self.controller.scale_factor), origin_y - axis_length),
+                            self.font, 0.43 * self.controller.scale_factor, (255, 0, 0),
+                            1)
 
                 cv2.arrowedLine(
                     frame,
@@ -299,10 +300,15 @@ class ManipulatorPage(ttk.Frame):
                     3,
                     tipLength=0.15
                 )
-                cv2.putText(frame, "X", (origin_x + axis_length - 5, origin_y + 20), self.font, 0.5,
-                            (0, 0, 255), 2)
-                cv2.putText(frame, f"{self.len_f_x}, mm", (origin_x + axis_length - 30, origin_y - 20), self.font,
-                            0.43, (0, 0, 255), 1)
+                cv2.putText(frame, "X", (origin_x + axis_length - int(5 * self.controller.scale_factor),
+                                         origin_y + int(20 * self.controller.scale_factor)),
+                            self.font, 0.5 * self.controller.scale_factor, (0, 0, 255),
+                            2)
+                cv2.putText(frame, f"{self.len_f_x}, mm",
+                            (origin_x + axis_length - int(30 * self.controller.scale_factor),
+                             origin_y - int(20 * self.controller.scale_factor)),
+                            self.font, 0.43 * self.controller.scale_factor, (0, 0, 255),
+                            1)
 
                 img = Image.fromarray(frame)
                 imgtk = ImageTk.PhotoImage(image=img)
