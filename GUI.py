@@ -7,6 +7,7 @@ from server import Server
 from ArUcoPage import ArUcoPage
 from NeuralNetPage import NeuralNetPage
 from ManipulatorPage import ManipulatorPage
+from CalibrationWindow import CalibrationWindow
 
 
 def get_available_cameras():
@@ -25,6 +26,7 @@ class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
+        self.settings_window = None
         self.current_frame = None
         self.cap = None
 
@@ -119,6 +121,10 @@ class MainApp(tk.Tk):
         self.camera_combobox.pack(side="left", padx=int(30 * self.scale_factor), pady=int(10 * self.scale_factor))
 
     def show_frame(self, page_name):
+        if self.settings_window is not None:
+            self.settings_window.destroy()
+            self.settings_window = None
+
         if self.cap is not None and self.cap.isOpened():
             self.cap.release()
             self.cap = None
@@ -142,7 +148,11 @@ class MainApp(tk.Tk):
                 self.current_frame.tkraise()
 
     def open_settings_window(self):
-        pass
+        self.show_frame("HomePage")
+        self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
+        self.settings_window = CalibrationWindow(self)
+        self.settings_window.cap = self.cap
+        self.settings_window.update_stream()
 
     def toggle_connection(self):
         if self.connection_button.image == self.disconnect_icon_resized:
