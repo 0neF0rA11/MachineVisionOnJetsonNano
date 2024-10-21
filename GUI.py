@@ -119,10 +119,11 @@ class MainApp(tk.Tk):
         self.camera_combobox.pack(side="left", padx=int(30 * self.scale_factor), pady=int(10 * self.scale_factor))
 
     def show_frame(self, page_name):
+        if self.cap is not None and self.cap.isOpened():
+            self.cap.release()
+            self.cap = None
+
         if page_name == "HomePage":
-            if self.cap is not None and self.cap.isOpened():
-                self.cap.release()
-                self.cap = None
             if self.current_frame is not None:
                 self.current_frame.update_flag = False
             self.current_frame = self.frames[page_name]
@@ -145,13 +146,13 @@ class MainApp(tk.Tk):
 
     def toggle_connection(self):
         if self.connection_button.image == self.disconnect_icon_resized:
-            self.ser.connect_port(self.frames['ManipulatorPage'], None)
+            self.ser.connect_port(self.frames['ManipulatorPage'])
             if self.ser.ser and self.ser.ser.is_open:
                 self.connection_button.config(image=self.connect_icon_resized)
                 self.connection_button.image = self.connect_icon_resized
         else:
             if self.ser.ser and self.ser.ser.is_open:
-                self.ser.close_port(None)
+                self.ser.close_port()
                 self.connection_button.config(image=self.disconnect_icon_resized)
                 self.connection_button.image = self.disconnect_icon_resized
 
