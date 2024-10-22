@@ -325,13 +325,13 @@ class ManipulatorPage(ttk.Frame):
         if number > len(self.objects_coord):
             self.controller.ser.send_command("Out of range\n")
             return
-        object = sorted(self.objects_coord, key=lambda point: point[0] ** 2 + point[1] ** 2)[number - 1]
+        objects = sorted(self.objects_coord, key=lambda point: point[0] ** 2 + point[1] ** 2)[number - 1]
         self.controller.ser.send_command(
-            f"G01 X {object[0]} Y {object[1]} Z {self.h}\n"
+            f"G01 X {objects[0]} Y {objects[1]} Z {self.h}\n"
         )
 
     def response_to_request(self, received_list):
-        if len(received_list) != 2 or len(received_list) != 3 or received_list[0].lower() != 'get':
+        if len(received_list) != 2 and len(received_list) != 3 or received_list[0].lower() != 'get':
             self.controller.ser.send_command("An error in the command.\n")
             return
 
