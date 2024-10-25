@@ -22,6 +22,7 @@ class ManipulatorPage(ttk.Frame):
         self.cap = None
         self.video_paused = False
         self.update_flag = False
+        self.rotate_flag = True
         self.controller = controller
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -70,14 +71,23 @@ class ManipulatorPage(ttk.Frame):
         pause_icon = ImageTk.PhotoImage(
             Image.open("images_data/pause_icon.png").resize((int(50 * self.controller.scale_factor),
                                                              int(50 * self.controller.scale_factor))))
+        rotate_icon = ImageTk.PhotoImage(
+            Image.open("images_data/rotate_icon.png").resize((int(50 * self.controller.scale_factor),
+                                                              int(50 * self.controller.scale_factor))))
 
         button_frame = tk.Frame(settings_frame, bg='#001f4b')
         button_frame.pack(pady=10)
+
+        self.rotate_button = tk.Button(button_frame, image=rotate_icon, command=self.rotate_action,
+                                       borderwidth=0)
+        self.rotate_button.image = rotate_icon
+        self.rotate_button.pack(side=tk.LEFT, padx=5)
 
         self.pause_button = tk.Button(button_frame, image=pause_icon, command=self.pause_action,
                                       borderwidth=0)
         self.pause_button.image = pause_icon
         self.pause_button.pack(side=tk.LEFT, padx=5)
+
         self.stop_button = tk.Button(button_frame, image=stop_icon,
                                      command=lambda: self.controller.show_frame("HomePage"),
                                      borderwidth=0)
@@ -232,6 +242,9 @@ class ManipulatorPage(ttk.Frame):
     def pause_action(self):
         self.video_paused = not self.video_paused
 
+    def rotate_action(self):
+        self.rotate_flag = not self.rotate_flag
+
     def update_stream(self):
         if not self.video_paused:
             ret, frame = self.cap.read()
@@ -257,8 +270,11 @@ class ManipulatorPage(ttk.Frame):
                     if w * h > self.min_area and 0 <= center_x_coord <= self.x_max and 0 <= center_y_coord <= self.y_max:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
                         self.objects_coord.append(
-                            (int(center_x_coord * 1 / self.k_x),
-                             int(center_y_coord * 1 / self.k_y)))
+                            (self.len_f_x - int(center_x_coord * 1 / self.k_x),
+                             self.len_f_y - int(center_y_coord * 1 / self.k_y)))
+
+                if self.rotate_flag:
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
 
                 line_length = int(40 * self.controller.scale_factor)
                 cv2.line(frame,
