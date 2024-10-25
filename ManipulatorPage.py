@@ -282,6 +282,7 @@ class ManipulatorPage(ttk.Frame):
 
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
                 self.objects_coord = []
+                self.texts = []
                 for i, contour in enumerate(conts):
                     x, y, w, h = cv2.boundingRect(contour)
                     center_x, center_y = x + w // 2, self.image_shape[1] - (y + h) + h // 2
@@ -289,12 +290,21 @@ class ManipulatorPage(ttk.Frame):
                     center_x_coord, center_y_coord = center_x_cam + self.x_0, center_y_cam + self.y_0
                     if w * h > self.min_area and 0 <= center_x_coord <= self.x_max and 0 <= center_y_coord <= self.y_max:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
-                        self.objects_coord.append(
-                            (self.field_x_size - int(center_x_coord * 1 / self.scale_x),
-                             self.field_y_size - int(center_y_coord * 1 / self.scale_y)))
+                        coords = (self.field_x_size - int(center_x_coord * 1 / self.scale_x),
+                                  self.field_y_size - int(center_y_coord * 1 / self.scale_y))
+                        self.objects_coord.append(coords)
+                        text = f"X: {coords[0]}, Y: {coords[1]}"
+                        if not self.rotate_flag:
+                            text_position = (x, y - 10)
+                        else:
+                            text_position = (self.image_shape[0] - w - x, self.image_shape[1] - h - y - 10)
+                        self.texts.append((text, text_position))
 
                 if self.rotate_flag:
                     frame = cv2.rotate(frame, cv2.ROTATE_180)
+
+                for text, text_position in self.texts:
+                    cv2.putText(frame, text, text_position, self.font, 0.5, (255, 255, 0), 1, cv2.LINE_AA)
 
                 if self.visualise_flag:
                     line_length = int(40 * self.controller.scale_factor)
