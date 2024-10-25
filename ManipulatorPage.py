@@ -23,6 +23,7 @@ class ManipulatorPage(ttk.Frame):
         self.video_paused = False
         self.update_flag = False
         self.rotate_flag = True
+        self.visualise_flag = False
         self.controller = controller
         self.font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -74,6 +75,9 @@ class ManipulatorPage(ttk.Frame):
         rotate_icon = ImageTk.PhotoImage(
             Image.open("images_data/rotate_icon.png").resize((int(50 * self.controller.scale_factor),
                                                               int(50 * self.controller.scale_factor))))
+        visualise_icon = ImageTk.PhotoImage(
+            Image.open("images_data/visualise_icon.png").resize((int(50 * self.controller.scale_factor),
+                                                                 int(50 * self.controller.scale_factor))))
 
         button_frame = tk.Frame(settings_frame, bg='#001f4b')
         button_frame.pack(pady=10)
@@ -93,6 +97,11 @@ class ManipulatorPage(ttk.Frame):
                                      borderwidth=0)
         self.stop_button.image = stop_icon
         self.stop_button.pack(side=tk.LEFT, padx=5)
+
+        self.visualise_button = tk.Button(button_frame, image=visualise_icon, command=self.visualise_action,
+                                       borderwidth=0)
+        self.visualise_button.image = visualise_icon
+        self.visualise_button.pack(side=tk.LEFT, padx=5)
 
         self.cam_label = tk.Label(camera_frame, bg='#001f4b')
         self.cam_label.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
@@ -178,26 +187,30 @@ class ManipulatorPage(ttk.Frame):
         return frame
 
     def set_camera_config(self):
-        if not os.path.exists("config.txt"):
-            self.k_x = 83 / 70
-            self.k_y = 83 / 70
-            self.mm_to_pixel_x = int(250 * self.k_x)
-            self.mm_to_pixel_y = int(250 * self.k_x)
-            self.x_0, self.y_0 = self.mm_to_pixel_x, self.mm_to_pixel_y
-            self.x_max = self.x_0 + self.mm_to_pixel_x
-            self.y_max = self.y_0 + self.mm_to_pixel_y
-            self.h = 70
-            self.len_f_x, self.len_f_y = 500, 500
-        else:
+        config_data = {}
+        if os.path.exists("config.txt"):
             with open("config.txt", "r") as file:
                 config_data = {line.split()[0]: float(line.split()[1]) for line in file}
-                self.k_x = float(config_data['k_x'])
-                self.k_y = float(config_data['k_y'])
-                self.len_f_x, self.len_f_y = int(config_data['len_f_x']), int(config_data['len_f_y'])
-                self.x_0, self.y_0 = int(self.k_x * self.len_f_x // 2), int(self.k_y * self.len_f_y // 2)
-                self.x_max = self.x_0 * 2
-                self.y_max = self.y_0 * 2
-                self.h = int(config_data['h'])
+
+        if (not os.path.exists("config.txt") or
+                len(config_data) < 5 or 'h' not in config_data or
+                'scale_x' not in config_data or 'scale_y' not in config_data or
+                'field_x_size' not in config_data or 'field_y_size' not in config_data):
+            config_data = {
+                'scale_x': 83 / 70,
+                'scale_y': 83 / 70,
+                'field_x_size': 500,
+                'field_y_size': 500,
+                'h': 70
+            }
+
+        self.scale_x = float(config_data['scale_x'])
+        self.scale_y = float(config_data['scale_y'])
+        self.field_x_size, self.field_y_size = int(config_data['field_x_size']), int(config_data['field_y_size'])
+        self.x_0, self.y_0 = int(self.scale_x * self.field_x_size // 2), int(self.scale_y * self.field_y_size // 2)
+        self.x_max = self.x_0 * 2
+        self.y_max = self.y_0 * 2
+        self.h = int(config_data['h'])
 
     def pick_color(self, event, color=None):
         if self.controller.current_frame == self and self.cap is not None and not self.video_paused:
@@ -213,6 +226,10 @@ class ManipulatorPage(ttk.Frame):
                 _, frame = self.cap.read()
                 if frame is not None:
                     frame = self.apply_settings(frame)
+
+                    if self.rotate_flag:
+                        frame = cv2.rotate(frame, cv2.ROTATE_180)
+
                     hsv_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
                     if event is not None:
@@ -245,6 +262,9 @@ class ManipulatorPage(ttk.Frame):
     def rotate_action(self):
         self.rotate_flag = not self.rotate_flag
 
+    def visualise_action(self):
+        self.visualise_flag = not self.visualise_flag
+
     def update_stream(self):
         if not self.video_paused:
             ret, frame = self.cap.read()
@@ -270,61 +290,86 @@ class ManipulatorPage(ttk.Frame):
                     if w * h > self.min_area and 0 <= center_x_coord <= self.x_max and 0 <= center_y_coord <= self.y_max:
                         cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 0, 255), 2)
                         self.objects_coord.append(
-                            (self.len_f_x - int(center_x_coord * 1 / self.k_x),
-                             self.len_f_y - int(center_y_coord * 1 / self.k_y)))
+                            (self.field_x_size - int(center_x_coord * 1 / self.scale_x),
+                             self.field_y_size - int(center_y_coord * 1 / self.scale_y)))
 
                 if self.rotate_flag:
                     frame = cv2.rotate(frame, cv2.ROTATE_180)
 
-                line_length = int(40 * self.controller.scale_factor)
-                cv2.line(frame,
-                         (self.center_x - line_length // 2, self.center_y),
-                         (self.center_x + line_length // 2, self.center_y),
-                         (255, 0, 0), 1)
-                cv2.line(frame, (self.center_x, self.center_y - line_length // 2),
-                         (self.center_x, self.center_y + line_length // 2),
-                         (255, 0, 0), 1)
+                if self.visualise_flag:
+                    line_length = int(40 * self.controller.scale_factor)
+                    cv2.line(frame,
+                             (self.center_x - line_length // 2, self.center_y),
+                             (self.center_x + line_length // 2, self.center_y),
+                             (255, 0, 0), 1)
+                    cv2.line(frame, (self.center_x, self.center_y - line_length // 2),
+                             (self.center_x, self.center_y + line_length // 2),
+                             (255, 0, 0), 1)
 
-                # Draw axis
-                image_width, image_height = self.image_shape
-                padding = 35
-                axis_length = int((min(image_width, image_height) // 6) * 1.5 * self.controller.scale_factor)
+                    # Draw axis
+                    image_width, image_height = self.image_shape
+                    padding = 35
+                    axis_length = int((min(image_width, image_height) // 6) * 1.5 * self.controller.scale_factor)
 
-                origin_x = padding
-                origin_y = image_height - padding
-                cv2.arrowedLine(
-                    frame,
-                    (origin_x, origin_y),  # Начало вектора
-                    (origin_x, origin_y - axis_length),  # Конец вектора
-                    (255, 0, 0),  # Цвет (синий)
-                    3,  # Толщина линии
-                    tipLength=0.15  # Длина наконечника стрелки
-                )
-                cv2.putText(frame, "Y", (origin_x - int(15 * self.controller.scale_factor), origin_y - axis_length),
-                            self.font, 0.5 * self.controller.scale_factor, (255, 0, 0),
-                            2)
-                cv2.putText(frame, f"{self.len_f_y}, mm",
-                            (origin_x + int(10 * self.controller.scale_factor), origin_y - axis_length),
-                            self.font, 0.43 * self.controller.scale_factor, (255, 0, 0),
-                            1)
+                    origin_x = padding
+                    origin_y = image_height - padding
+                    cv2.arrowedLine(
+                        frame,
+                        (origin_x, origin_y),  # Начало вектора
+                        (origin_x, origin_y - axis_length),  # Конец вектора
+                        (255, 0, 0),  # Цвет (синий)
+                        3,  # Толщина линии
+                        tipLength=0.15  # Длина наконечника стрелки
+                    )
+                    cv2.putText(frame, "Y", (origin_x - int(15 * self.controller.scale_factor), origin_y - axis_length),
+                                self.font, 0.5 * self.controller.scale_factor, (255, 0, 0),
+                                2)
+                    cv2.putText(frame, f"{self.field_y_size}, mm",
+                                (origin_x + int(10 * self.controller.scale_factor), origin_y - axis_length),
+                                self.font, 0.43 * self.controller.scale_factor, (255, 0, 0),
+                                1)
 
-                cv2.arrowedLine(
-                    frame,
-                    (origin_x, origin_y),
-                    (origin_x + axis_length, origin_y),
-                    (0, 0, 255),
-                    3,
-                    tipLength=0.15
-                )
-                cv2.putText(frame, "X", (origin_x + axis_length - int(5 * self.controller.scale_factor),
-                                         origin_y + int(20 * self.controller.scale_factor)),
-                            self.font, 0.5 * self.controller.scale_factor, (0, 0, 255),
-                            2)
-                cv2.putText(frame, f"{self.len_f_x}, mm",
-                            (origin_x + axis_length - int(30 * self.controller.scale_factor),
-                             origin_y - int(20 * self.controller.scale_factor)),
-                            self.font, 0.43 * self.controller.scale_factor, (0, 0, 255),
-                            1)
+                    cv2.arrowedLine(
+                        frame,
+                        (origin_x, origin_y),
+                        (origin_x + axis_length, origin_y),
+                        (0, 0, 255),
+                        3,
+                        tipLength=0.15
+                    )
+                    cv2.putText(frame, "X", (origin_x + axis_length - int(5 * self.controller.scale_factor),
+                                             origin_y + int(20 * self.controller.scale_factor)),
+                                self.font, 0.5 * self.controller.scale_factor, (0, 0, 255),
+                                2)
+                    cv2.putText(frame, f"{self.field_x_size}, mm",
+                                (origin_x + axis_length - int(30 * self.controller.scale_factor),
+                                 origin_y - int(20 * self.controller.scale_factor)),
+                                self.font, 0.43 * self.controller.scale_factor, (0, 0, 255),
+                                1)
+
+                    field_width_pixels = int(self.field_x_size * self.scale_x)
+                    field_height_pixels = int(self.field_y_size * self.scale_y)
+
+                    top_left = (max(0, self.image_shape[0] // 2 - field_width_pixels // 2),
+                                max(0, self.image_shape[1] // 2 - field_height_pixels // 2))
+                    bottom_right = (min(self.image_shape[0], self.image_shape[0] // 2 + field_width_pixels // 2),
+                                    min(self.image_shape[1], self.image_shape[1] // 2 + field_height_pixels // 2))
+                    top_right = (bottom_right[0], top_left[1])
+                    bottom_left = (top_left[0], bottom_right[1])
+
+                    corner_length = int(25 * self.controller.scale_factor)
+
+                    cv2.line(frame, top_left, (top_left[0] + corner_length, top_left[1]), (255, 0, 0), 2)
+                    cv2.line(frame, top_left, (top_left[0], top_left[1] + corner_length), (255, 0, 0), 2)
+
+                    cv2.line(frame, top_right, (top_right[0] - corner_length, top_right[1]), (255, 0, 0), 2)
+                    cv2.line(frame, top_right, (top_right[0], top_right[1] + corner_length), (255, 0, 0), 2)
+
+                    cv2.line(frame, bottom_left, (bottom_left[0] + corner_length, bottom_left[1]), (255, 0, 0), 2)
+                    cv2.line(frame, bottom_left, (bottom_left[0], bottom_left[1] - corner_length), (255, 0, 0), 2)
+
+                    cv2.line(frame, bottom_right, (bottom_right[0] - corner_length, bottom_right[1]), (255, 0, 0), 2)
+                    cv2.line(frame, bottom_right, (bottom_right[0], bottom_right[1] - corner_length), (255, 0, 0), 2)
 
                 img = Image.fromarray(frame)
                 imgtk = ImageTk.PhotoImage(image=img)
