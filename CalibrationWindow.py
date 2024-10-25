@@ -19,6 +19,7 @@ class CalibrationWindow(tk.Toplevel):
         self.kernelOpen = np.ones((5, 5))
         self.kernelClose = np.ones((20, 20))
         self.font = cv2.FONT_HERSHEY_SIMPLEX
+        self.protocol("WM_DELETE_WINDOW", self.destroy_cam)
 
         self.cap = None
         self.title("Калибровочное окно")
@@ -76,11 +77,11 @@ class CalibrationWindow(tk.Toplevel):
         data['k_x'] = self.w / int(data['k_x'])
         data['k_y'] = self.h / int(data['k_y'])
         with open("config.txt", "w") as file:
-            file.write(f"k_x {data['k_x']}\n")
-            file.write(f"k_y {data['k_y']}\n")
-            file.write(f"h {int(data['h'])}\n")
-            file.write(f"len_f_x {int(data['field_x'])}\n")
-            file.write(f"len_f_y {int(data['field_y'])}\n")
+            file.write(f"scale_x {data['k_x']}\n")
+            file.write(f"scale_y {data['k_y']}\n")
+            file.write(f"h {data['h']}\n")
+            file.write(f"field_x_size {data['field_x']}\n")
+            file.write(f"field_y_size {data['field_y']}\n")
         self.parent.frames["ManipulatorPage"].set_camera_config()
         self.destroy_cam()
 
