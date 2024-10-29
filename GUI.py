@@ -7,7 +7,7 @@ from server import Server
 from ArUcoPage import ArUcoPage
 from NeuralNetPage import NeuralNetPage
 from ManipulatorPage import ManipulatorPage
-from CalibrationWindow import CalibrationWindow
+from CalibrationPage import CalibrationPage
 
 
 def get_available_cameras():
@@ -26,7 +26,6 @@ class MainApp(tk.Tk):
     def __init__(self):
         super().__init__()
 
-        self.settings_window = None
         self.current_frame = None
         self.cap = None
 
@@ -56,7 +55,7 @@ class MainApp(tk.Tk):
         container.grid_columnconfigure(0, weight=1)
         self.frames = {}
 
-        for F in (HomePage, ManipulatorPage, NeuralNetPage, ArUcoPage):
+        for F in (HomePage, ManipulatorPage, CalibrationPage, NeuralNetPage, ArUcoPage):
             page_name = F.__name__
             frame = F(parent=container, controller=self)
             self.frames[page_name] = frame
@@ -90,23 +89,6 @@ class MainApp(tk.Tk):
         self.connect_icon_resized = ImageTk.PhotoImage(connect_icon.resize((int(50 * self.scale_factor),
                                                                             int(50 * self.scale_factor))))
 
-        close_button = tk.Button(top_bar, image=close_icon_resized, bg='#00326e', relief="flat", command=self.quit,
-                                 activebackground='#001f4b', highlightthickness=0)
-        close_button.image = close_icon_resized
-        close_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
-
-        home_button = tk.Button(top_bar, image=home_icon_resized, bg='#00326e', relief="flat",
-                                command=lambda: self.show_frame("HomePage"),
-                                activebackground='#001f4b', highlightthickness=0)
-        home_button.image = home_icon_resized
-        home_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
-
-        settings_button = tk.Button(top_bar, image=settings_icon_resized, bg='#00326e', relief="flat",
-                                    command=self.open_settings_window,
-                                    activebackground='#001f4b', highlightthickness=0)
-        settings_button.image = settings_icon_resized
-        settings_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
-
         self.connection_button = tk.Button(top_bar, image=self.disconnect_icon_resized, bg='#00326e', relief="flat",
                                            command=self.toggle_connection, activebackground='#00326e',
                                            highlightthickness=0)
@@ -120,11 +102,26 @@ class MainApp(tk.Tk):
         self.camera_combobox.configure(font=("Arial", int(20 * self.scale_factor)))
         self.camera_combobox.pack(side="left", padx=int(30 * self.scale_factor), pady=int(10 * self.scale_factor))
 
-    def show_frame(self, page_name):
-        if self.settings_window is not None:
-            self.settings_window.destroy()
-            self.settings_window = None
+        close_button = tk.Button(top_bar, image=close_icon_resized, bg='#00326e', relief="flat", command=self.quit,
+                                 activebackground='#001f4b', highlightthickness=0)
+        close_button.image = close_icon_resized
+        close_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
 
+        home_button = tk.Button(top_bar, image=home_icon_resized, bg='#00326e', relief="flat",
+                                command=lambda: self.show_frame("HomePage"),
+                                activebackground='#001f4b', highlightthickness=0)
+        home_button.image = home_icon_resized
+        home_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
+
+        settings_button = tk.Button(top_bar, image=settings_icon_resized, bg='#00326e', relief="flat",
+                                    command=lambda: self.show_frame("CalibrationPage"),
+                                    activebackground='#001f4b', highlightthickness=0)
+        settings_button.image = settings_icon_resized
+        settings_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
+
+    def show_frame(self, page_name):
+        if self.frames[page_name] == self.current_frame:
+            return
         if self.cap is not None and self.cap.isOpened():
             self.cap.release()
             self.cap = None
@@ -146,13 +143,6 @@ class MainApp(tk.Tk):
                 self.current_frame.video_paused = False
                 self.current_frame.update_stream()
                 self.current_frame.tkraise()
-
-    def open_settings_window(self):
-        self.show_frame("HomePage")
-        self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
-        self.settings_window = CalibrationWindow(self)
-        self.settings_window.cap = self.cap
-        self.settings_window.update_stream()
 
     def toggle_connection(self):
         if self.connection_button.image == self.disconnect_icon_resized:
