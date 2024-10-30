@@ -14,6 +14,7 @@ class NeuralNetPage(ttk.Frame):
         self.cap = None
         self.video_paused = False
         self.update_flag = False
+        self.rotate_flag = True
         self.controller = controller
         self.image_shape = [int(1200 * self.controller.scale_factor),
                             int(840 * self.controller.scale_factor)]
@@ -59,10 +60,17 @@ class NeuralNetPage(ttk.Frame):
         pause_icon = ImageTk.PhotoImage(
             Image.open("images_data/pause_icon.png").resize((int(50 * self.controller.scale_factor),
                                                              int(50 * self.controller.scale_factor))))
+        rotate_icon = ImageTk.PhotoImage(
+            Image.open("images_data/rotate_icon.png").resize((int(50 * self.controller.scale_factor),
+                                                              int(50 * self.controller.scale_factor))))
 
         button_frame = tk.Frame(settings_frame, bg='#001f4b')
         button_frame.pack(pady=10)
 
+        self.rotate_button = tk.Button(button_frame, image=rotate_icon, command=self.rotate_action,
+                                       borderwidth=0)
+        self.rotate_button.image = rotate_icon
+        self.rotate_button.pack(side=tk.LEFT, padx=5)
         self.pause_button = tk.Button(button_frame, image=pause_icon, command=self.pause_action,
                                       borderwidth=0)
         self.pause_button.image = pause_icon
@@ -130,6 +138,9 @@ class NeuralNetPage(ttk.Frame):
         else:
             self.video_paused = True
 
+    def rotate_action(self):
+        self.rotate_flag = not self.rotate_flag
+
     def update_stream(self):
         if not self.video_paused:
             ret, frame = self.cap.read()
@@ -141,7 +152,7 @@ class NeuralNetPage(ttk.Frame):
 
                 a = results[0].boxes.data
                 px = pd.DataFrame(a).astype("float")
-
+                texts = []
                 for index, row in px.iterrows():
                     confidence = row[4]
                     x1 = int(row[0])
@@ -152,12 +163,21 @@ class NeuralNetPage(ttk.Frame):
                     c = self.classes[d]
                     if self.selected_class is None or c == self.selected_class:
                         cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 255, 255), 2)
-                        cv2.putText(frame, f'{c} {confidence:.2f}', (x1, y1 - 25), cv2.FONT_HERSHEY_SIMPLEX,
-                                    0.5, (255, 255, 255), 2)
+                        if not self.rotate_flag:
+                            text_position = (x1, y1 - 25)
+                        else:
+                            text_position = (self.image_shape[0] - x2, self.image_shape[1] - y2 - 25)
+                        texts.append((f'{c} {confidence:.2f}', text_position))
 
-                im = Image.fromarray(frame)
-                imgtk = ImageTk.PhotoImage(image=im)
+                if self.rotate_flag:
+                    frame = cv2.rotate(frame, cv2.ROTATE_180)
 
+                for text, text_position in texts:
+                    cv2.putText(frame, text, text_position, cv2.FONT_HERSHEY_SIMPLEX,
+                                0.5, (255, 255, 255), 2)
+
+                img = Image.fromarray(frame)
+                imgtk = ImageTk.PhotoImage(image=img)
                 self.cam_label.imgtk = imgtk
                 self.cam_label.config(image=imgtk)
 
