@@ -126,7 +126,7 @@ class MainApp(tk.Tk):
             self.cap.release()
             self.cap = None
 
-        if page_name == "HomePage":
+        if page_name == "HomePage" or page_name == 'CalibrationPage':
             if self.current_frame is not None:
                 self.current_frame.update_flag = False
             self.current_frame = self.frames[page_name]
