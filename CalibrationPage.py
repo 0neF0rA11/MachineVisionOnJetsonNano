@@ -1,6 +1,4 @@
 import math
-import os
-import time
 
 import cv2
 import tkinter as tk
@@ -112,9 +110,9 @@ class CalibrationPage(ttk.Frame):
         config_frame = ttk.Frame(frame, width=int(450 * self.controller.scale_factor),
                                  height=int(600 * self.controller.scale_factor))
         config_frame.place(x=50, y=150)
-        self.fields = {"w": self.create_field(config_frame, "Длина объекта, мм:", 50, row=4),
-                       "l": self.create_field(config_frame, "Ширина объекта, мм", 50, row=5),
-                       "h": self.create_field(config_frame, "Высота объекта, мм:", 50, row=6),
+        self.fields = {"w": self.create_field(config_frame, "Длина объекта, мм:", 40, row=4),
+                       "l": self.create_field(config_frame, "Ширина объекта, мм", 40, row=5),
+                       "h": self.create_field(config_frame, "Высота объекта, мм:", 40, row=6),
                        "field_x_size": self.create_field(config_frame, "Длина поля по оси X, мм:", 620, row=7),
                        "field_y_size": self.create_field(config_frame, "Длина поля по оси Y, мм:", 620, row=8)}
 
@@ -166,7 +164,6 @@ class CalibrationPage(ttk.Frame):
                 file.write(f"{key} {value}\n")
 
         self.controller.frames["ManipulatorPage"].set_camera_config()
-        self.controller.show_frame("HomePage")
 
     def pick_color(self, event, color=None):
         if self.controller.current_frame == self and self.cap is not None and not self.video_paused:
@@ -257,7 +254,3 @@ class CalibrationPage(ttk.Frame):
 
         if self.update_flag:
             self.cam_label.after(10, self.update_stream)
-
-
-
-
