@@ -197,11 +197,11 @@ class ManipulatorPage(ttk.Frame):
                 'scale_x' not in config_data or 'scale_y' not in config_data or
                 'field_x_size' not in config_data or 'field_y_size' not in config_data):
             config_data = {
-                'scale_x': 83 / 70,
-                'scale_y': 83 / 70,
-                'field_x_size': 500,
-                'field_y_size': 500,
-                'h': 70
+                'scale_x': 0.625,
+                'scale_y': 0.59,
+                'field_x_size': 620,
+                'field_y_size': 620,
+                'h': 40
             }
 
         self.scale_x = float(config_data['scale_x'])
@@ -308,13 +308,6 @@ class ManipulatorPage(ttk.Frame):
 
                 if self.visualise_flag:
                     line_length = int(40 * self.controller.scale_factor)
-                    cv2.line(frame,
-                             (self.center_x - line_length // 2, self.center_y),
-                             (self.center_x + line_length // 2, self.center_y),
-                             (255, 0, 0), 1)
-                    cv2.line(frame, (self.center_x, self.center_y - line_length // 2),
-                             (self.center_x, self.center_y + line_length // 2),
-                             (255, 0, 0), 1)
 
                     # Draw axis
                     image_width, image_height = self.image_shape
@@ -360,10 +353,10 @@ class ManipulatorPage(ttk.Frame):
                     field_width_pixels = int(self.field_x_size * self.scale_x)
                     field_height_pixels = int(self.field_y_size * self.scale_y)
 
-                    top_left = (max(0, self.image_shape[0] // 2 - field_width_pixels // 2),
-                                max(0, self.image_shape[1] // 2 - field_height_pixels // 2))
-                    bottom_right = (min(self.image_shape[0], self.image_shape[0] // 2 + field_width_pixels // 2),
-                                    min(self.image_shape[1], self.image_shape[1] // 2 + field_height_pixels // 2))
+                    top_left = (max(0, self.center_x - field_width_pixels // 2),
+                                max(0, self.center_y - field_height_pixels // 2))
+                    bottom_right = (min(self.image_shape[0], self.center_x + field_width_pixels // 2),
+                                    min(self.image_shape[1], self.center_y + field_height_pixels // 2))
                     top_right = (bottom_right[0], top_left[1])
                     bottom_left = (top_left[0], bottom_right[1])
 
