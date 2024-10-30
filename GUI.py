@@ -1,3 +1,5 @@
+import time
+
 import cv2
 import tkinter as tk
 from tkinter import ttk
@@ -44,20 +46,20 @@ class MainApp(tk.Tk):
         style = ttk.Style()
         style.configure("TFrame", background="#001f4b")
 
-        container = ttk.Frame(self, style="TFrame", relief="flat", borderwidth=0)
-        container.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
+        self.container = ttk.Frame(self, style="TFrame", relief="flat", borderwidth=0)
+        self.container.grid(row=1, column=0, sticky="nsew", padx=0, pady=0)
 
         self.grid_rowconfigure(0, weight=0)
         self.grid_rowconfigure(1, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        container.grid_rowconfigure(0, weight=1)
-        container.grid_columnconfigure(0, weight=1)
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
         self.frames = {}
 
-        for F in (HomePage, ManipulatorPage, CalibrationPage, NeuralNetPage, ArUcoPage):
+        for F in (HomePage, ManipulatorPage, NeuralNetPage, ArUcoPage):
             page_name = F.__name__
-            frame = F(parent=container, controller=self)
+            frame = F(parent=self.container, controller=self)
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
         self.show_frame("HomePage")
@@ -120,6 +122,11 @@ class MainApp(tk.Tk):
         settings_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
 
     def show_frame(self, page_name):
+        if page_name == 'CalibrationPage' and page_name not in self.frames.keys():
+            frame = CalibrationPage(parent=self.container, controller=self)
+            self.frames[page_name] = frame
+            frame.grid(row=0, column=0, sticky="nsew")
+
         if self.frames[page_name] == self.current_frame:
             return
         if self.cap is not None:
@@ -211,5 +218,6 @@ class HomePage(ttk.Frame):
 
 
 if __name__ == "__main__":
+    time.sleep(5)
     app = MainApp()
     app.mainloop()
