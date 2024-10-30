@@ -122,7 +122,7 @@ class MainApp(tk.Tk):
     def show_frame(self, page_name):
         if self.frames[page_name] == self.current_frame:
             return
-        if self.cap is not None and self.cap.isOpened():
+        if self.cap is not None:
             self.cap.release()
             self.cap = None
 
