@@ -126,7 +126,7 @@ class MainApp(tk.Tk):
             self.cap.release()
             self.cap = None
 
-        if page_name == "HomePage" or page_name == 'CalibrationPage':
+        if page_name == "HomePage":
             if self.current_frame is not None:
                 self.current_frame.update_flag = False
             self.current_frame = self.frames[page_name]
@@ -136,6 +136,8 @@ class MainApp(tk.Tk):
             if self.camera_combobox.get() == "Нет доступной камеры":
                 messagebox.showerror("Ошибка", "Нет доступной камеры. Запуск невозможен!")
             else:
+                if page_name == 'CalibrationPage':
+                    self.current_frame.update_flag = False
                 self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
                 self.current_frame = self.frames[page_name]
                 self.current_frame.cap = self.cap
