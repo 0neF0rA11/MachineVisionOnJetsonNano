@@ -122,10 +122,16 @@ class MainApp(tk.Tk):
         settings_button.pack(side="right", padx=int(10 * self.scale_factor), pady=int(10 * self.scale_factor))
 
     def show_frame(self, page_name):
+        if page_name != "HomePage":
+            if self.camera_combobox.get() == "Нет доступной камеры":
+                messagebox.showerror("Ошибка", "Нет доступной камеры. Запуск невозможен!")
+                return
+
         if page_name == 'CalibrationPage' and page_name not in self.frames.keys():
             frame = CalibrationPage(parent=self.container, controller=self)
             self.frames[page_name] = frame
             frame.grid(row=0, column=0, sticky="nsew")
+
 
         if self.frames[page_name] == self.current_frame:
             return
@@ -140,18 +146,15 @@ class MainApp(tk.Tk):
             self.current_frame.tkraise()
 
         if page_name != "HomePage":
-            if self.camera_combobox.get() == "Нет доступной камеры":
-                messagebox.showerror("Ошибка", "Нет доступной камеры. Запуск невозможен!")
-            else:
-                if page_name == 'CalibrationPage':
-                    self.current_frame.update_flag = False
-                self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
-                self.current_frame = self.frames[page_name]
-                self.current_frame.cap = self.cap
-                self.current_frame.update_flag = True
-                self.current_frame.video_paused = False
-                self.current_frame.update_stream()
-                self.current_frame.tkraise()
+            if page_name == 'CalibrationPage':
+                self.current_frame.update_flag = False
+            self.cap = cv2.VideoCapture(int(self.camera_combobox.get().split()[1]) - 1)
+            self.current_frame = self.frames[page_name]
+            self.current_frame.cap = self.cap
+            self.current_frame.update_flag = True
+            self.current_frame.video_paused = False
+            self.current_frame.update_stream()
+            self.current_frame.tkraise()
 
     def toggle_connection(self):
         if self.connection_button.image == self.disconnect_icon_resized:
